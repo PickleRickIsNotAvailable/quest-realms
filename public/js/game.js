@@ -652,8 +652,19 @@ socket.on('story-update', (data) => {
 
 // Action submitted by a player
 socket.on('action-submitted', (data) => {
-  if (data.playerName !== state.playerName) {
-    showToast(`${data.playerName} submitted their action 🎲 ${data.diceRoll.total}`, 'info');
+  // Show dice roll to the submitting player
+  if (data.playerName === state.playerName) {
+    const critClass = data.diceRoll.critical ? 'crit' : data.diceRoll.critFail ? 'critfail' : '';
+    const critText = data.diceRoll.critical ? ' — CRITICAL HIT!' : data.diceRoll.critFail ? ' — CRITICAL FAIL!' : '';
+    $('#my-dice-roll').innerHTML = `
+      <div class="dice-result-item" style="justify-content:center; margin-bottom:8px;">
+        <span class="dice-value ${critClass} dice-roll-anim" style="font-size:1.5rem;">🎲 ${data.diceRoll.total}</span>
+        ${data.weaponDamage ? `<span style="color:var(--danger); margin-left:8px;">⚔️ ${data.weaponDamage.weapon} = ${data.weaponDamage.damage} dmg</span>` : ''}
+        <span style="font-size:0.85rem; color:var(--text-dim); margin-left:8px;">${critText}</span>
+      </div>
+    `;
+  } else {
+    showToast(`${data.playerName} rolled 🎲 ${data.diceRoll.total}${data.diceRoll.critical ? ' CRIT!' : data.diceRoll.critFail ? ' CRIT FAIL!' : ''}`, 'info');
   }
   
   updateWaitingPlayers(data.waitingFor);
