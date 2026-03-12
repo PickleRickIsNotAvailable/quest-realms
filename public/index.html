@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0a0a1a">
+  <title>Quest Realms ⚔️</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ====================================================== -->
+  <!-- SCREEN: TITLE / HOME -->
+  <!-- ====================================================== -->
+  <div id="screen-title" class="screen active">
+    <div class="title-container">
+      <div class="title-logo">⚔️</div>
+      <h1 class="title-text">Quest Realms</h1>
+      <p class="title-subtitle">Multiplayer Zombie Survival RPG</p>
+      
+      <div class="title-buttons">
+        <input type="text" id="player-name" class="input-field" placeholder="Enter your name..." maxlength="20">
+        <button id="btn-create-room" class="btn btn-primary" disabled>
+          🏰 Create Room
+        </button>
+        <div class="divider"><span>or</span></div>
+        <input type="text" id="room-code-input" class="input-field" placeholder="Enter room code..." maxlength="5" style="text-transform: uppercase;">
+        <button id="btn-join-room" class="btn btn-secondary" disabled>
+          🚪 Join Room
+        </button>
+      </div>
+      
+      <p id="title-error" class="error-text"></p>
+    </div>
+  </div>
+
+  <!-- ====================================================== -->
+  <!-- SCREEN: LOBBY -->
+  <!-- ====================================================== -->
+  <div id="screen-lobby" class="screen">
+    <div class="screen-header">
+      <h2>🏰 Lobby</h2>
+      <div class="room-code-display">
+        Room: <span id="display-room-code" class="code-badge"></span>
+      </div>
+    </div>
+    
+    <div class="lobby-content">
+      <div class="players-list" id="lobby-players"></div>
+      
+      <!-- GM Only: Story Setup -->
+      <div id="gm-setup" class="hidden">
+        <h3>📜 Set the Adventure</h3>
+        <textarea id="premise-input" class="textarea-field" placeholder="Describe the world, the quest, the danger... Your players will live in this story. (e.g., 'A dark curse has fallen upon the kingdom of Eldrath. The last dragon egg has been stolen from the mountain temple...')" rows="5"></textarea>
+        
+        <div class="setting-picker">
+          <label>Setting:</label>
+          <div class="setting-options">
+            <button class="setting-btn active" data-setting="fantasy">🧙 Fantasy</button>
+            <button class="setting-btn" data-setting="sci-fi">🚀 Sci-Fi</button>
+            <button class="setting-btn" data-setting="horror">👻 Horror</button>
+            <button class="setting-btn" data-setting="western">🤠 Western</button>
+            <button class="setting-btn" data-setting="modern">🏙️ Modern</button>
+            <button class="setting-btn" data-setting="post-apocalyptic">☢️ Post-Apoc</button>
+          </div>
+        </div>
+        
+        <button id="btn-set-premise" class="btn btn-primary" disabled>
+          📖 Set Story & Begin Character Creation
+        </button>
+      </div>
+      
+      <!-- Non-GM: Waiting -->
+      <div id="waiting-for-gm" class="hidden">
+        <div class="waiting-animation">
+          <div class="loading-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <p>Waiting for the Game Master to set the adventure...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================== -->
+  <!-- SCREEN: CHARACTER CREATION -->
+  <!-- ====================================================== -->
+  <div id="screen-character" class="screen">
+    <div class="screen-header">
+      <h2>⚔️ Create Your Character</h2>
+      <div class="premise-preview" id="premise-preview"></div>
+    </div>
+    
+    <div class="character-form">
+      <div class="form-group">
+        <label>Character Name</label>
+        <input type="text" id="char-name" class="input-field" placeholder="e.g., Thorin Ironforge" maxlength="30">
+      </div>
+      
+      <div class="form-group">
+        <label>Race</label>
+        <div class="pill-selector" id="race-selector"></div>
+      </div>
+      
+      <div class="form-group">
+        <label>Class</label>
+        <div class="pill-selector" id="class-selector"></div>
+      </div>
+      
+      <div class="form-group">
+        <label>Backstory</label>
+        <textarea id="char-backstory" class="textarea-field" placeholder="Who is your character? What drives them? What are they afraid of? (This deeply affects gameplay!)" rows="4"></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Traits (tap to select up to 3)</label>
+        <div class="pill-selector multi" id="trait-selector"></div>
+      </div>
+      
+      <div class="form-group">
+        <label>Starting Equipment (tap to select up to 3)</label>
+        <div class="pill-selector multi" id="equipment-selector"></div>
+      </div>
+      
+      <button id="btn-submit-character" class="btn btn-primary" disabled>
+        ✅ Lock In Character
+      </button>
+      
+      <div id="character-waiting" class="hidden">
+        <div class="char-ready-list" id="char-ready-list"></div>
+        <button id="btn-start-game" class="btn btn-accent hidden">
+          🎮 Start Adventure!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================== -->
+  <!-- SCREEN: GAME (Main gameplay) -->
+  <!-- ====================================================== -->
+  <div id="screen-game" class="screen">
+    <!-- Top bar: Round & Players -->
+    <div class="game-top-bar">
+      <div class="round-badge">Round <span id="game-round">1</span></div>
+      <div class="players-health-bar" id="players-health-bar"></div>
+    </div>
+
+    <!-- Story Area (scrollable) -->
+    <div class="story-area" id="story-area">
+      <div id="story-content"></div>
+      <div id="loading-indicator" class="hidden">
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+        <p id="loading-message">The Game Master is consulting ChatGPT...</p>
+      </div>
+    </div>
+
+    <!-- GM ChatGPT Panel (only shown to GM) -->
+    <div id="gm-panel" class="gm-panel hidden">
+      <div class="gm-panel-header">
+        <h3>🤖 ChatGPT Bridge</h3>
+        <button class="gm-panel-minimize" id="gm-panel-minimize">▼</button>
+      </div>
+      <div class="gm-panel-body" id="gm-panel-body">
+        <!-- Steps -->
+        <div class="gm-steps" id="gm-steps"></div>
+        
+        <!-- Prompt to copy -->
+        <div class="gm-prompt-section" id="gm-prompt-section">
+          <label class="gm-label">📋 Copy this prompt to ChatGPT:</label>
+          <div class="gm-prompt-box" id="gm-prompt-box"></div>
+          <button id="btn-copy-prompt" class="btn btn-accent gm-copy-btn">📋 Copy Prompt</button>
+        </div>
+        
+        <!-- Response paste area -->
+        <div class="gm-response-section" id="gm-response-section">
+          <label class="gm-label">📥 Paste ChatGPT's response here:</label>
+          <textarea id="gm-response-input" class="gm-response-textarea" placeholder="Paste the ENTIRE ChatGPT response here (including the { } brackets)..." rows="6"></textarea>
+          <div id="gm-error" class="gm-error hidden"></div>
+          <button id="btn-send-response" class="btn btn-primary gm-send-btn" disabled>🚀 Send to Players</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dice Results -->
+    <div id="dice-results" class="dice-results hidden"></div>
+
+    <!-- NPC Panel (collapsible) -->
+    <div id="npc-panel" class="npc-panel hidden">
+      <button class="npc-toggle" id="npc-toggle">👥 NPCs <span class="npc-count">0</span></button>
+      <div class="npc-list" id="npc-list"></div>
+    </div>
+
+    <!-- Perk Notification -->
+    <div id="perk-notification" class="perk-notification hidden">
+      <div class="perk-content">
+        <h3>🌟 Perk Point Available!</h3>
+        <p>You've leveled up! Tap to gain a random skill.</p>
+        <button id="btn-spend-perk" class="btn btn-accent">🎲 Roll for Skill!</button>
+      </div>
+    </div>
+
+    <!-- Action Input -->
+    <div class="action-area" id="action-area">
+      <div class="waiting-players" id="waiting-players"></div>
+      <div class="action-input-wrapper" id="action-input-wrapper">
+        <textarea id="action-input" class="action-input" placeholder="What does your character do?" rows="2" maxlength="500"></textarea>
+        <button id="btn-submit-action" class="btn-send" disabled>
+          <span>⚔️</span>
+        </button>
+      </div>
+      <div id="action-submitted-msg" class="action-submitted hidden">
+        ✅ Action submitted! Waiting for other players...
+      </div>
+    </div>
+
+    <!-- Dead Overlay -->
+    <div id="dead-overlay" class="dead-overlay hidden">
+      <div class="dead-content">
+        <div class="skull">💀</div>
+        <h2>You Have Fallen</h2>
+        <p>Your character has died. You can continue watching the adventure.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================== -->
+  <!-- SCREEN: GAME OVER -->
+  <!-- ====================================================== -->
+  <div id="screen-gameover" class="screen">
+    <div class="gameover-container">
+      <div class="gameover-icon">☠️</div>
+      <h1>Quest Complete</h1>
+      <div id="gameover-narrative"></div>
+      <div id="gameover-stats"></div>
+      <button id="btn-new-game" class="btn btn-primary">🔄 New Game</button>
+    </div>
+  </div>
+
+  <!-- Character Bio Sheet (slide-up panel) -->
+  <div id="bio-panel" class="bio-panel hidden">
+    <div class="bio-panel-header">
+      <h3>📋 Character Sheet</h3>
+      <button class="bio-close" id="bio-close">✕</button>
+    </div>
+    <div class="bio-content" id="bio-content"></div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/game.js"></script>
+</body>
+</html>
