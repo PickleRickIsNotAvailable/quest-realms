@@ -46,6 +46,7 @@ Generate an exciting opening narrative for this adventure. You must:
 4. Reference each player's character by name and weave in their backstory/traits
 5. End with a clear prompt asking "What do you do?"
 6. IMPORTANT: Each character has a SECRET FLAW listed above. Subtly weave these into the story WITHOUT revealing what the flaw is. For example, if someone is "Clumsy", describe them stumbling. If "Paranoid Wreck", describe them nervously scanning shadows. Players should FEEL the effects but never be told the flaw name.
+7. Provide 3-4 suggested action options for the players. These should be interesting choices that fit the current situation. Players can also type their own custom action.
 
 ============================
 RESPOND IN THIS EXACT JSON FORMAT (this is critical):
@@ -60,6 +61,11 @@ RESPOND IN THIS EXACT JSON FORMAT (this is critical):
       "hp": 50,
       "maxHp": 50
     }
+  ],
+  "options": [
+    "Option 1: A suggested action players could take",
+    "Option 2: Another possible action",
+    "Option 3: A third choice"
   ]
 }`;
   }
@@ -126,6 +132,7 @@ RULES:
 - You may introduce new NPCs or kill existing ones.
 - IMPORTANT: Each character has a SECRET FLAW. These MUST affect gameplay! Low dice rolls + a relevant flaw = the flaw causes problems. Describe the EFFECTS without naming the flaw. Example: A "Clumsy" character who rolls low trips and drops their weapon. A "Coward" who rolls low freezes in fear.
 - End with a new situation for the next round.
+- Provide 3-4 suggested action options for the next round. These should be interesting, varied choices that fit the situation. Players can also type their own custom action.
 
 ============================
 RESPOND IN THIS EXACT JSON FORMAT (this is critical):
@@ -140,6 +147,11 @@ RESPOND IN THIS EXACT JSON FORMAT (this is critical):
   ],
   "newNpcs": [
     {"name": "Name", "description": "desc", "role": "hostile", "hp": 30, "maxHp": 30}
+  ],
+  "options": [
+    "Option 1: A suggested action for the next round",
+    "Option 2: Another possible action",
+    "Option 3: A third choice"
   ]
 }`;
   }

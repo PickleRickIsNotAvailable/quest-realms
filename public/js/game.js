@@ -584,6 +584,7 @@ function submitAction() {
   actionInput.style.height = 'auto';
   btnAction.disabled = true;
   $('#action-input-wrapper').classList.add('hidden');
+  $('#action-options').classList.add('hidden');
   $('#action-submitted-msg').classList.remove('hidden');
 }
 
@@ -804,6 +805,28 @@ socket.on('story-update', (data) => {
       $('#action-submitted-msg').classList.add('hidden');
       btnAction.disabled = true;
       actionInput.value = '';
+      
+      // Show action options if available
+      const optionsContainer = $('#action-options');
+      optionsContainer.innerHTML = '';
+      if (data.options && data.options.length > 0) {
+        data.options.forEach(opt => {
+          const btn = document.createElement('button');
+          btn.className = 'option-btn';
+          btn.textContent = opt;
+          btn.addEventListener('click', () => {
+            actionInput.value = opt;
+            actionInput.style.height = 'auto';
+            actionInput.style.height = Math.min(actionInput.scrollHeight, 100) + 'px';
+            btnAction.disabled = false;
+            actionInput.focus();
+          });
+          optionsContainer.appendChild(btn);
+        });
+        optionsContainer.classList.remove('hidden');
+      } else {
+        optionsContainer.classList.add('hidden');
+      }
       
       // Show perk notification if available
       if (me.character.perkPoints > 0) {
@@ -1033,6 +1056,9 @@ function scrollStoryToBottom() {
 
 function formatMarkdown(text) {
   if (!text) return '';
+  
+  // Convert literal \n sequences to actual newlines
+  text = text.replace(/\\n/g, '\n');
   
   return text
     // Bold

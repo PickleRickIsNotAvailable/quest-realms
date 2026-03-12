@@ -216,7 +216,8 @@ io.on('connection', (socket) => {
         npcs: room.getNPCList(),
         round: room.round,
         waitingFor: room.getAlivePlayers().map(p => p.name),
-        players: sanitizePlayerList(room.getPlayerList())
+        players: sanitizePlayerList(room.getPlayerList()),
+        options: parsed.options || []
       });
 
     } else if (data.type === 'round') {
@@ -290,7 +291,8 @@ io.on('connection', (socket) => {
         round: room.round,
         waitingFor: alivePlayers.map(p => p.name),
         players: sanitizePlayerList(room.getPlayerList()),
-        diceResults: diceResults
+        diceResults: diceResults,
+        options: parsed.options || []
       });
     }
   });
@@ -522,7 +524,7 @@ function parseAIResponse(text) {
   // ---- Field-by-field extraction (handles unescaped quotes, newlines, etc.) ----
   // Known string fields and array fields in our schema
   const stringFields = ['narrative'];
-  const arrayFields = ['hpChanges', 'xpAwards', 'npcs', 'newNpcs'];
+  const arrayFields = ['hpChanges', 'xpAwards', 'npcs', 'newNpcs', 'options'];
   const result = {};
 
   // Extract string fields by finding the key, then scanning for the true end of the value
