@@ -490,14 +490,23 @@ function findPlayerByCharName(room, charName) {
 
 function parseAIResponse(text) {
   let cleaned = text.trim();
-  
+
+  // Replace smart/curly quotes with straight quotes everywhere first
+  cleaned = cleaned
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
+    .replace(/\u2014/g, '--')   // em-dash
+    .replace(/\u2013/g, '-')    // en-dash
+    .replace(/\u2026/g, '...')  // ellipsis
+    .replace(/[\u00A0]/g, ' '); // non-breaking space
+
   // Extract JSON from markdown code blocks
   const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (codeBlockMatch) {
     cleaned = codeBlockMatch[1].trim();
   }
-  
-  // Find JSON object in the text
+
+  // Find outermost JSON object
   const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     cleaned = jsonMatch[0];
@@ -506,81 +515,98 @@ function parseAIResponse(text) {
   // Try direct parse first
   try {
     const parsed = JSON.parse(cleaned);
-    if (!parsed.narrative) {
-      throw new Error('Response is missing the "narrative" field.');
-    }
+    if (!parsed.narrative) throw new Error('Response is missing the "narrative" field.');
     return parsed;
-  } catch (directError) {
-    // Fall through to repair attempts
+  } catch (_) { /* fall through to field extraction */ }
+
+  // ---- Field-by-field extraction (handles unescaped quotes, newlines, etc.) ----
+  // Known string fields and array fields in our schema
+  const stringFields = ['narrative'];
+  const arrayFields = ['hpChanges', 'xpAwards', 'npcs', 'newNpcs'];
+  const result = {};
+
+  // Extract string fields by finding the key, then scanning for the true end of the value
+  for (const field of stringFields) {
+    // Find "field" : "
+    const keyPattern = new RegExp(`"${field}"\\s*:\\s*"`);
+    const keyMatch = keyPattern.exec(cleaned);
+    if (!keyMatch) continue;
+
+    const valueStart = keyMatch.index + keyMatch[0].length;
+    // Scan forward to find the closing quote. The real closing quote is followed by
+    // optional whitespace and then , or } or another key like "hpChanges"
+    // This distinguishes it from unescaped quotes inside the narrative text.
+    const endPatterns = arrayFields.map(f => `"${f}"`).join('|');
+    const closingRegex = new RegExp(`"\\s*(?:,\\s*(?:${endPatterns}|"narrative"|\\})\\s*|\\s*\\}\\s*$)`, 'g');
+    closingRegex.lastIndex = valueStart;
+
+    let endIdx = -1;
+    let match;
+    while ((match = closingRegex.exec(cleaned)) !== null) {
+      endIdx = match.index;
+      break;
+    }
+
+    // If pattern didn't match, try finding the last " before the end
+    if (endIdx === -1) {
+      // Look for closing quote followed by , or } at end of string
+      const simpleEnd = cleaned.lastIndexOf('"', cleaned.lastIndexOf('}'));
+      if (simpleEnd > valueStart) {
+        endIdx = simpleEnd;
+      }
+    }
+
+    if (endIdx > valueStart) {
+      let rawValue = cleaned.substring(valueStart, endIdx);
+      // Escape characters that break JSON strings
+      rawValue = rawValue
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r')
+        .replace(/\t/g, '\\t');
+      // Verify it parses as a JSON string
+      try {
+        result[field] = JSON.parse(`"${rawValue}"`);
+      } catch (_) {
+        result[field] = cleaned.substring(valueStart, endIdx);
+      }
+    }
   }
 
-  // Repair common ChatGPT JSON issues:
-  // 1. Replace smart/curly quotes with straight quotes
-  cleaned = cleaned
-    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
-    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'");
+  // Extract array fields - these are usually well-formed
+  for (const field of arrayFields) {
+    const arrRegex = new RegExp(`"${field}"\\s*:\\s*\\[`);
+    const arrMatch = arrRegex.exec(cleaned);
+    if (!arrMatch) continue;
 
-  // 2. Fix unescaped newlines/tabs inside string values
-  //    Walk through the string and escape control chars only when inside a JSON string
-  let repaired = '';
-  let inString = false;
-  let escaped = false;
-  for (let i = 0; i < cleaned.length; i++) {
-    const ch = cleaned[i];
-    if (escaped) {
-      repaired += ch;
-      escaped = false;
-      continue;
+    // Find matching closing bracket
+    const arrStart = arrMatch.index + arrMatch[0].length - 1; // include the [
+    let depth = 0;
+    let arrEnd = -1;
+    for (let i = arrStart; i < cleaned.length; i++) {
+      if (cleaned[i] === '[') depth++;
+      else if (cleaned[i] === ']') {
+        depth--;
+        if (depth === 0) { arrEnd = i + 1; break; }
+      }
     }
-    if (ch === '\\' && inString) {
-      repaired += ch;
-      escaped = true;
-      continue;
-    }
-    if (ch === '"') {
-      inString = !inString;
-      repaired += ch;
-      continue;
-    }
-    if (inString) {
-      if (ch === '\n') { repaired += '\\n'; continue; }
-      if (ch === '\r') { repaired += '\\r'; continue; }
-      if (ch === '\t') { repaired += '\\t'; continue; }
-    }
-    repaired += ch;
-  }
-  cleaned = repaired;
-
-  // 3. Try parsing the repaired JSON
-  try {
-    const parsed = JSON.parse(cleaned);
-    if (!parsed.narrative) {
-      throw new Error('Response is missing the "narrative" field.');
-    }
-    return parsed;
-  } catch (repairError) {
-    // One last attempt: extract fields manually with regex
-  }
-
-  // 4. Last resort: extract the narrative field with a generous regex
-  const narrativeMatch = cleaned.match(/"narrative"\s*:\s*"([\s\S]*?)"\s*[,}]/);
-  if (!narrativeMatch) {
-    throw new Error('Could not parse JSON even after repair. Make sure the response contains a "narrative" field inside { } braces.');
-  }
-
-  // Build a minimal valid object with narrative, try to grab other fields too
-  const result = { narrative: narrativeMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"') };
-
-  // Try to extract arrays like hpChanges, xpAwards, npcs, newNpcs
-  for (const field of ['hpChanges', 'xpAwards', 'npcs', 'newNpcs']) {
-    const arrMatch = cleaned.match(new RegExp(`"${field}"\\s*:\\s*(\\[[\\s\\S]*?\\])\\s*[,}]`));
-    if (arrMatch) {
-      try { result[field] = JSON.parse(arrMatch[1]); } catch (_) { /* skip */ }
+    if (arrEnd > arrStart) {
+      const arrStr = cleaned.substring(arrStart, arrEnd);
+      try {
+        result[field] = JSON.parse(arrStr);
+      } catch (_) {
+        // Try fixing common issues in arrays: trailing commas
+        try {
+          const fixedArr = arrStr.replace(/,\s*([}\]])/g, '$1');
+          result[field] = JSON.parse(fixedArr);
+        } catch (_2) { /* skip this field */ }
+      }
     }
   }
 
   if (!result.narrative) {
-    throw new Error('Response is missing the "narrative" field.');
+    throw new Error('Response is missing the "narrative" field. Make sure the response contains a "narrative" field inside { } braces.');
   }
   return result;
 }
