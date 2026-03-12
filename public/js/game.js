@@ -693,8 +693,8 @@ function showGMPanel(data) {
   $('#gm-panel-body').classList.remove('collapsed');
   gmPanelMinimize.textContent = '▼';
   
-  // Scroll to GM panel
-  setTimeout(() => gmPanel.scrollIntoView({ behavior: 'smooth' }), 200);
+  // Scroll the response textarea into view
+  setTimeout(() => gmResponseInput.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
 }
 
 function hideGMPanel() {

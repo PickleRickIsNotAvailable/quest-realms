@@ -1098,23 +1098,25 @@ h3 { font-size: 1.1rem; }
    GM CHATGPT PANEL
    ============================================================ */
 .gm-panel {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  max-height: 85vh;
+  max-height: 55vh;
   background: #0e0e28;
   border-top: 2px solid var(--accent);
   border-radius: 16px 16px 0 0;
-  z-index: 100;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   box-shadow: 0 -4px 30px rgba(0,0,0,0.6);
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .gm-panel.hidden {
   display: none;
+}
+
+/* When GM panel is open, shrink the story area */
+.gm-panel:not(.hidden) ~ .action-area {
+  flex-shrink: 0;
 }
 
 .gm-panel-header {
