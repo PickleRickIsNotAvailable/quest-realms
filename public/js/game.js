@@ -168,6 +168,7 @@ let selectedRace = '';
 let selectedClass = '';
 let selectedTraits = [];
 let selectedEquipment = [];
+let selectedLocation = '';
 
 // ---- Setting-specific options ----
 const SETTING_OPTIONS = {
@@ -214,6 +215,18 @@ const SETTING_OPTIONS = {
       { value: 'Flashlight', label: '🔦 Flashlight' },
       { value: 'Molotov Cocktail', label: '🔥 Molotov Cocktail' },
       { value: 'Backpack', label: '🎒 Backpack' }
+    ],
+    locations: [
+      { value: 'Johannesburg CBD', label: '🏙️ Johannesburg CBD' },
+      { value: 'Soweto', label: '🏘️ Soweto' },
+      { value: 'Cape Town Waterfront', label: '⛵ Cape Town Waterfront' },
+      { value: 'Durban Beachfront', label: '🏖️ Durban Beachfront' },
+      { value: 'Pretoria', label: '🏛️ Pretoria' },
+      { value: 'Kruger National Park', label: '🦁 Kruger National Park' },
+      { value: 'Table Mountain', label: '⛰️ Table Mountain' },
+      { value: 'Sandton', label: '💼 Sandton' },
+      { value: 'Khayelitsha', label: '🏚️ Khayelitsha' },
+      { value: 'Bloemfontein', label: '🌻 Bloemfontein' }
     ]
   }
 };
@@ -227,6 +240,7 @@ function populateCharacterOptions(setting) {
   selectedClass = '';
   selectedTraits = [];
   selectedEquipment = [];
+  selectedLocation = '';
 
   function renderPills(containerId, items) {
     const container = $(`#${containerId}`);
@@ -239,6 +253,7 @@ function populateCharacterOptions(setting) {
   renderPills('class-selector', options.classes);
   renderPills('trait-selector', options.traits);
   renderPills('equipment-selector', options.equipment);
+  renderPills('location-selector', options.locations);
 
   // Auto-select first race if only one option
   if (options.races.length === 1) {
@@ -290,6 +305,7 @@ function setupMultiSelect(containerId, getArray, max = 3) {
 
 setupSingleSelect('race-selector', (val) => { selectedRace = val; });
 setupSingleSelect('class-selector', (val) => { selectedClass = val; });
+setupSingleSelect('location-selector', (val) => { selectedLocation = val; });
 setupMultiSelect('trait-selector', () => selectedTraits, 3);
 setupMultiSelect('equipment-selector', () => selectedEquipment, 3);
 
@@ -300,6 +316,7 @@ function checkCharacterReady() {
   const ready = charNameInput.value.trim().length >= 2
     && selectedRace
     && selectedClass
+    && selectedLocation
     && charBackstoryInput.value.trim().length >= 10
     && selectedTraits.length > 0
     && selectedEquipment.length > 0;
@@ -313,7 +330,8 @@ btnSubmitChar.addEventListener('click', () => {
     class: selectedClass,
     backstory: charBackstoryInput.value.trim(),
     traits: [...selectedTraits],
-    equipment: [...selectedEquipment]
+    equipment: [...selectedEquipment],
+    location: selectedLocation
   };
   
   socket.emit('submit-character', {

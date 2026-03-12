@@ -123,6 +123,7 @@ io.on('connection', (socket) => {
       traits: data.character.traits || [],
       skills: data.character.skills || [],
       equipment: data.character.equipment || [],
+      location: data.character.location || 'Unknown',
       hp: 100,
       maxHp: 100,
       alive: true,
