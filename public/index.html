@@ -53,23 +53,12 @@
       
       <!-- GM Only: Story Setup -->
       <div id="gm-setup" class="hidden">
-        <h3>📜 Set the Adventure</h3>
-        <textarea id="premise-input" class="textarea-field" placeholder="Describe the world, the quest, the danger... Your players will live in this story. (e.g., 'A dark curse has fallen upon the kingdom of Eldrath. The last dragon egg has been stolen from the mountain temple...')" rows="5"></textarea>
-        
-        <div class="setting-picker">
-          <label>Setting:</label>
-          <div class="setting-options">
-            <button class="setting-btn active" data-setting="fantasy">🧙 Fantasy</button>
-            <button class="setting-btn" data-setting="sci-fi">🚀 Sci-Fi</button>
-            <button class="setting-btn" data-setting="horror">👻 Horror</button>
-            <button class="setting-btn" data-setting="western">🤠 Western</button>
-            <button class="setting-btn" data-setting="modern">🏙️ Modern</button>
-            <button class="setting-btn" data-setting="post-apocalyptic">☢️ Post-Apoc</button>
-          </div>
-        </div>
+        <h3>🧟 Zombie Survival</h3>
+        <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 8px;">The dead walk. Survivors fight. Inspired by The Walking Dead & The Last of Us.</p>
+        <textarea id="premise-input" class="textarea-field" placeholder="Describe the situation... Where are the survivors? What just happened? What's the danger? (e.g., 'A group of strangers takes shelter in an abandoned shopping mall as a massive horde closes in from the highway...')" rows="5"></textarea>
         
         <button id="btn-set-premise" class="btn btn-primary" disabled>
-          📖 Set Story & Begin Character Creation
+          🧟 Set Story & Begin Character Creation
         </button>
       </div>
       
@@ -90,14 +79,14 @@
   <!-- ====================================================== -->
   <div id="screen-character" class="screen">
     <div class="screen-header">
-      <h2>⚔️ Create Your Character</h2>
+      <h2>🧟 Create Your Survivor</h2>
       <div class="premise-preview" id="premise-preview"></div>
     </div>
     
     <div class="character-form">
       <div class="form-group">
         <label>Character Name</label>
-        <input type="text" id="char-name" class="input-field" placeholder="e.g., Thorin Ironforge" maxlength="30">
+        <input type="text" id="char-name" class="input-field" placeholder="e.g., Rick, Ellie, Joel" maxlength="30">
       </div>
       
       <div class="form-group">
@@ -112,7 +101,7 @@
       
       <div class="form-group">
         <label>Backstory</label>
-        <textarea id="char-backstory" class="textarea-field" placeholder="Who is your character? What drives them? What are they afraid of? (This deeply affects gameplay!)" rows="4"></textarea>
+        <textarea id="char-backstory" class="textarea-field" placeholder="Who were they before the outbreak? Who did they lose? What keeps them going? (This deeply affects gameplay!)" rows="4"></textarea>
       </div>
       
       <div class="form-group">

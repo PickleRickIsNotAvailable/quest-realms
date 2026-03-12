@@ -12,7 +12,7 @@ const state = {
   isGM: false,
   phase: 'title',
   character: null,
-  selectedSetting: 'fantasy',
+  selectedSetting: 'zombie-survival',
   myPerkPoints: 0,
   currentPromptType: null  // 'opening' or 'round' — tracks what GM is working on
 };
@@ -136,14 +136,7 @@ function updateLobbyPlayers(players) {
   `).join('');
 }
 
-// Setting picker
-$$('.setting-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    $$('.setting-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    state.selectedSetting = btn.dataset.setting;
-  });
-});
+// Setting is hardcoded to zombie-survival
 
 // Premise input
 const premiseInput = $('#premise-input');
@@ -178,224 +171,21 @@ let selectedEquipment = [];
 
 // ---- Setting-specific options ----
 const SETTING_OPTIONS = {
-  'fantasy': {
-    races: [
-      { value: 'Human', label: '🧑 Human' },
-      { value: 'Elf', label: '🧝 Elf' },
-      { value: 'Dwarf', label: '⛏️ Dwarf' },
-      { value: 'Halfling', label: '🍀 Halfling' },
-      { value: 'Orc', label: '👹 Orc' }
-    ],
-    classes: [
-      { value: 'Warrior', label: '⚔️ Warrior' },
-      { value: 'Mage', label: '🧙 Mage' },
-      { value: 'Rogue', label: '🗡️ Rogue' },
-      { value: 'Cleric', label: '✝️ Cleric' },
-      { value: 'Ranger', label: '🏹 Ranger' },
-      { value: 'Paladin', label: '🛡️ Paladin' },
-      { value: 'Bard', label: '🎵 Bard' },
-      { value: 'Barbarian', label: '💪 Barbarian' }
-    ],
-    traits: [
-      { value: 'Brave', label: '💪 Brave' },
-      { value: 'Cunning', label: '🧠 Cunning' },
-      { value: 'Wise', label: '📖 Wise' },
-      { value: 'Lucky', label: '🍀 Lucky' },
-      { value: 'Noble', label: '👑 Noble' },
-      { value: 'Mysterious', label: '🌙 Mysterious' },
-      { value: 'Fierce', label: '🔥 Fierce' },
-      { value: 'Gentle', label: '🕊️ Gentle' },
-      { value: 'Resilient', label: '🦴 Resilient' },
-      { value: 'Charismatic', label: '✨ Charismatic' }
-    ],
-    equipment: [
-      { value: 'Longsword', label: '⚔️ Longsword' },
-      { value: 'Staff', label: '🪄 Staff' },
-      { value: 'Bow', label: '🏹 Bow' },
-      { value: 'Shield', label: '🛡️ Shield' },
-      { value: 'Healing Potion', label: '🧪 Healing Potion' },
-      { value: 'Dagger', label: '🗡️ Dagger' },
-      { value: 'Spell Book', label: '📕 Spell Book' },
-      { value: 'Battle Axe', label: '🪓 Battle Axe' },
-      { value: 'Crossbow', label: '🏹 Crossbow' },
-      { value: 'Mace', label: '🔨 Mace' }
-    ]
-  },
-  'sci-fi': {
-    races: [
-      { value: 'Human', label: '🧑 Human' },
-      { value: 'Android', label: '🤖 Android' },
-      { value: 'Alien', label: '👽 Alien' },
-      { value: 'Cyborg', label: '🦾 Cyborg' },
-      { value: 'Clone', label: '🧬 Clone' }
-    ],
-    classes: [
-      { value: 'Pilot', label: '🚀 Pilot' },
-      { value: 'Engineer', label: '🔧 Engineer' },
-      { value: 'Soldier', label: '🎖️ Soldier' },
-      { value: 'Medic', label: '💉 Medic' },
-      { value: 'Hacker', label: '💻 Hacker' },
-      { value: 'Scientist', label: '🔬 Scientist' },
-      { value: 'Bounty Hunter', label: '🎯 Bounty Hunter' },
-      { value: 'Diplomat', label: '🤝 Diplomat' }
-    ],
-    traits: [
-      { value: 'Brave', label: '💪 Brave' },
-      { value: 'Cunning', label: '🧠 Cunning' },
-      { value: 'Tech-Savvy', label: '💻 Tech-Savvy' },
-      { value: 'Lucky', label: '🍀 Lucky' },
-      { value: 'Ruthless', label: '🔥 Ruthless' },
-      { value: 'Paranoid', label: '👁️ Paranoid' },
-      { value: 'Resourceful', label: '🛠️ Resourceful' },
-      { value: 'Fast', label: '⚡ Fast' },
-      { value: 'Tough', label: '🦴 Tough' },
-      { value: 'Analytical', label: '🔍 Analytical' }
-    ],
-    equipment: [
-      { value: 'Pistol', label: '🔫 Pistol' },
-      { value: 'Rifle', label: '🎯 Rifle' },
-      { value: 'Shield', label: '🛡️ Energy Shield' },
-      { value: 'Healing Potion', label: '💊 Med Kit' },
-      { value: 'Flashlight', label: '🔦 Flashlight' },
-      { value: 'Dagger', label: '⚡ Plasma Blade' },
-      { value: 'Crossbow', label: '🤖 Drone' },
-      { value: 'Wand', label: '💻 Hacking Tool' },
-      { value: 'Shotgun', label: '💥 Grenades' },
-      { value: 'Bow', label: '📡 Scanner' }
-    ]
-  },
-  'horror': {
+  'zombie-survival': {
     races: [
       { value: 'Human', label: '🧑 Human' }
     ],
     classes: [
-      { value: 'Detective', label: '🔍 Detective' },
-      { value: 'Occultist', label: '🔮 Occultist' },
-      { value: 'Survivor', label: '🏃 Survivor' },
-      { value: 'Medium', label: '👻 Medium' },
-      { value: 'Doctor', label: '💉 Doctor' },
-      { value: 'Professor', label: '📚 Professor' },
-      { value: 'Reporter', label: '📰 Reporter' },
-      { value: 'Priest', label: '✝️ Priest' }
-    ],
-    traits: [
-      { value: 'Brave', label: '💪 Brave' },
-      { value: 'Paranoid', label: '👁️ Paranoid' },
-      { value: 'Resourceful', label: '🛠️ Resourceful' },
-      { value: 'Lucky', label: '🍀 Lucky' },
-      { value: 'Tough', label: '🦴 Tough' },
-      { value: 'Cunning', label: '🧠 Cunning' },
-      { value: 'Stealthy', label: '🌙 Stealthy' },
-      { value: 'Cold-blooded', label: '🧊 Cold-blooded' },
-      { value: 'Perceptive', label: '👂 Perceptive' },
-      { value: 'Desperate', label: '😰 Desperate' }
-    ],
-    equipment: [
-      { value: 'Flashlight', label: '🔦 Flashlight' },
-      { value: 'Pistol', label: '🔫 Pistol' },
-      { value: 'Dagger', label: '🗡️ Knife' },
-      { value: 'Healing Potion', label: '🧪 First Aid Kit' },
-      { value: 'Crossbow', label: '✝️ Cross' },
-      { value: 'Bow', label: '📷 Camera' },
-      { value: 'Wand', label: '🧂 Salt & Sage' },
-      { value: 'Staff', label: '🔥 Lighter' },
-      { value: 'Shield', label: '🪢 Rope' },
-      { value: 'Shotgun', label: '📻 Radio' }
-    ]
-  },
-  'western': {
-    races: [
-      { value: 'Human', label: '🧑 Human' }
-    ],
-    classes: [
-      { value: 'Gunslinger', label: '🔫 Gunslinger' },
-      { value: 'Sheriff', label: '⭐ Sheriff' },
-      { value: 'Outlaw', label: '🤠 Outlaw' },
-      { value: 'Doctor', label: '💉 Doctor' },
-      { value: 'Bounty Hunter', label: '🎯 Bounty Hunter' },
-      { value: 'Prospector', label: '⛏️ Prospector' },
-      { value: 'Preacher', label: '📖 Preacher' },
-      { value: 'Tracker', label: '🐾 Tracker' }
-    ],
-    traits: [
-      { value: 'Brave', label: '💪 Brave' },
-      { value: 'Ruthless', label: '🔥 Ruthless' },
-      { value: 'Lucky', label: '🍀 Lucky' },
-      { value: 'Cunning', label: '🧠 Cunning' },
-      { value: 'Tough', label: '🦴 Tough' },
-      { value: 'Fast', label: '⚡ Fast' },
-      { value: 'Cold-blooded', label: '🧊 Cold-blooded' },
-      { value: 'Honorable', label: '🤝 Honorable' },
-      { value: 'Resourceful', label: '🛠️ Resourceful' },
-      { value: 'Wild', label: '🐎 Wild' }
-    ],
-    equipment: [
-      { value: 'Pistol', label: '🔫 Revolver' },
-      { value: 'Rifle', label: '🎯 Rifle' },
-      { value: 'Shotgun', label: '💥 Shotgun' },
-      { value: 'Dagger', label: '🗡️ Knife' },
-      { value: 'Bow', label: '🪢 Lasso' },
-      { value: 'Staff', label: '🧨 Dynamite' },
-      { value: 'Healing Potion', label: '🥃 Whiskey Flask' },
-      { value: 'Shield', label: '🐴 Horse' },
-      { value: 'Crossbow', label: '🃏 Playing Cards' },
-      { value: 'Battle Axe', label: '⭐ Badge' }
-    ]
-  },
-  'modern': {
-    races: [
-      { value: 'Human', label: '🧑 Human' }
-    ],
-    classes: [
-      { value: 'Soldier', label: '🎖️ Soldier' },
-      { value: 'Hacker', label: '💻 Hacker' },
-      { value: 'Medic', label: '💉 Medic' },
-      { value: 'Detective', label: '🔍 Detective' },
-      { value: 'Spy', label: '🕵️ Spy' },
-      { value: 'Scientist', label: '🔬 Scientist' },
-      { value: 'Athlete', label: '🏃 Athlete' },
-      { value: 'Leader', label: '📣 Leader' }
-    ],
-    traits: [
-      { value: 'Brave', label: '💪 Brave' },
-      { value: 'Cunning', label: '🧠 Cunning' },
-      { value: 'Resourceful', label: '🛠️ Resourceful' },
-      { value: 'Lucky', label: '🍀 Lucky' },
-      { value: 'Tech-Savvy', label: '💻 Tech-Savvy' },
-      { value: 'Tough', label: '🦴 Tough' },
-      { value: 'Fast', label: '⚡ Fast' },
-      { value: 'Stealthy', label: '🌙 Stealthy' },
-      { value: 'Paranoid', label: '👁️ Paranoid' },
-      { value: 'Charismatic', label: '✨ Charismatic' }
-    ],
-    equipment: [
-      { value: 'Pistol', label: '🔫 Pistol' },
-      { value: 'Dagger', label: '🗡️ Knife' },
-      { value: 'Healing Potion', label: '🧪 Med Kit' },
-      { value: 'Flashlight', label: '🔦 Flashlight' },
-      { value: 'Wand', label: '📱 Phone' },
-      { value: 'Bow', label: '💻 Laptop' },
-      { value: 'Staff', label: '⚡ Taser' },
-      { value: 'Shield', label: '🦺 Body Armor' },
-      { value: 'Crossbow', label: '🔭 Binoculars' },
-      { value: 'Rifle', label: '🪝 Grappling Hook' }
-    ]
-  },
-  'post-apocalyptic': {
-    races: [
-      { value: 'Human', label: '🧑 Human' },
-      { value: 'Mutant', label: '☢️ Mutant' },
-      { value: 'Synthetic', label: '🤖 Synthetic' }
-    ],
-    classes: [
-      { value: 'Soldier', label: '🎖️ Soldier' },
+      { value: 'Ex-Soldier', label: '🎖️ Ex-Soldier' },
       { value: 'Medic', label: '💉 Medic' },
       { value: 'Scout', label: '🏃 Scout' },
-      { value: 'Engineer', label: '🔧 Engineer' },
+      { value: 'Mechanic', label: '🔧 Mechanic' },
       { value: 'Sharpshooter', label: '🎯 Sharpshooter' },
       { value: 'Brawler', label: '👊 Brawler' },
       { value: 'Survivalist', label: '🏕️ Survivalist' },
-      { value: 'Leader', label: '📣 Leader' }
+      { value: 'Leader', label: '📣 Leader' },
+      { value: 'Hunter', label: '🦌 Hunter' },
+      { value: 'Scavenger', label: '🔍 Scavenger' }
     ],
     traits: [
       { value: 'Brave', label: '💪 Brave' },
@@ -407,26 +197,30 @@ const SETTING_OPTIONS = {
       { value: 'Cold-blooded', label: '🧊 Cold-blooded' },
       { value: 'Resourceful', label: '🛠️ Resourceful' },
       { value: 'Fast', label: '⚡ Fast' },
-      { value: 'Tough', label: '🦴 Tough' }
+      { value: 'Tough', label: '🦴 Tough' },
+      { value: 'Calm Under Pressure', label: '🧘 Calm Under Pressure' },
+      { value: 'Protective', label: '🛡️ Protective' }
     ],
     equipment: [
-      { value: 'Dagger', label: '🗡️ Knife' },
-      { value: 'Battle Axe', label: '🪓 Axe' },
-      { value: 'Baseball Bat', label: '🏏 Bat' },
+      { value: 'Knife', label: '🗡️ Knife' },
+      { value: 'Axe', label: '🪓 Axe' },
+      { value: 'Baseball Bat', label: '🏏 Baseball Bat' },
+      { value: 'Machete', label: '⚔️ Machete' },
       { value: 'Pistol', label: '🔫 Pistol' },
-      { value: 'Rifle', label: '🎯 Rifle' },
       { value: 'Shotgun', label: '💥 Shotgun' },
+      { value: 'Rifle', label: '🎯 Rifle' },
       { value: 'Crossbow', label: '🏹 Crossbow' },
-      { value: 'Shield', label: '🛡️ Shield' },
-      { value: 'Healing Potion', label: '🧪 Med Kit' },
-      { value: 'Flashlight', label: '🔦 Flashlight' }
+      { value: 'Med Kit', label: '🧪 Med Kit' },
+      { value: 'Flashlight', label: '🔦 Flashlight' },
+      { value: 'Molotov Cocktail', label: '🔥 Molotov Cocktail' },
+      { value: 'Backpack', label: '🎒 Backpack' }
     ]
   }
 };
 
 // Populate pill selectors based on setting
 function populateCharacterOptions(setting) {
-  const options = SETTING_OPTIONS[setting] || SETTING_OPTIONS['fantasy'];
+  const options = SETTING_OPTIONS['zombie-survival'];
 
   // Reset selections
   selectedRace = '';
@@ -716,7 +510,7 @@ socket.on('player-joined', (data) => {
 // Phase changed
 socket.on('phase-changed', (data) => {
   if (data.phase === 'character-creation') {
-    populateCharacterOptions(data.setting || 'fantasy');
+    populateCharacterOptions('zombie-survival');
     showScreen('character');
     if (data.premise) {
       $('#premise-preview').textContent = `"${data.premise}"`;

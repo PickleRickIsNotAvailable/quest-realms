@@ -8,7 +8,7 @@ class GameState {
     this.gmId = gmSocketId;
     this.phase = 'lobby'; // lobby -> character-creation -> playing -> game-over
     this.premise = '';
-    this.setting = 'fantasy';
+    this.setting = 'zombie-survival';
     this.round = 0;
     this.storyLog = [];
     this.roundActions = new Map();
@@ -71,7 +71,7 @@ class GameState {
   getAlivePlayers() {
     const alive = [];
     this.players.forEach((player, id) => {
-      if (player.character && player.character.alive && player.connected) {
+      if (!player.isGM && player.character && player.character.alive && player.connected) {
         alive.push({ ...player, id });
       }
     });
@@ -81,7 +81,7 @@ class GameState {
   getWaitingPlayers() {
     const waiting = [];
     this.players.forEach((player, id) => {
-      if (player.character && player.character.alive && player.connected && !this.roundActions.has(id)) {
+      if (!player.isGM && player.character && player.character.alive && player.connected && !this.roundActions.has(id)) {
         waiting.push(player);
       }
     });
@@ -97,7 +97,7 @@ class GameState {
 
   allActionsSubmitted() {
     for (const [id, player] of this.players) {
-      if (player.character && player.character.alive && player.connected) {
+      if (!player.isGM && player.character && player.character.alive && player.connected) {
         if (!this.roundActions.has(id)) return false;
       }
     }
