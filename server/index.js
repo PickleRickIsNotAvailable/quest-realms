@@ -503,13 +503,86 @@ function parseAIResponse(text) {
     cleaned = jsonMatch[0];
   }
 
-  const parsed = JSON.parse(cleaned);
-  
-  if (!parsed.narrative) {
+  // Try direct parse first
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (!parsed.narrative) {
+      throw new Error('Response is missing the "narrative" field.');
+    }
+    return parsed;
+  } catch (directError) {
+    // Fall through to repair attempts
+  }
+
+  // Repair common ChatGPT JSON issues:
+  // 1. Replace smart/curly quotes with straight quotes
+  cleaned = cleaned
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'");
+
+  // 2. Fix unescaped newlines/tabs inside string values
+  //    Walk through the string and escape control chars only when inside a JSON string
+  let repaired = '';
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (escaped) {
+      repaired += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\' && inString) {
+      repaired += ch;
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      repaired += ch;
+      continue;
+    }
+    if (inString) {
+      if (ch === '\n') { repaired += '\\n'; continue; }
+      if (ch === '\r') { repaired += '\\r'; continue; }
+      if (ch === '\t') { repaired += '\\t'; continue; }
+    }
+    repaired += ch;
+  }
+  cleaned = repaired;
+
+  // 3. Try parsing the repaired JSON
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (!parsed.narrative) {
+      throw new Error('Response is missing the "narrative" field.');
+    }
+    return parsed;
+  } catch (repairError) {
+    // One last attempt: extract fields manually with regex
+  }
+
+  // 4. Last resort: extract the narrative field with a generous regex
+  const narrativeMatch = cleaned.match(/"narrative"\s*:\s*"([\s\S]*?)"\s*[,}]/);
+  if (!narrativeMatch) {
+    throw new Error('Could not parse JSON even after repair. Make sure the response contains a "narrative" field inside { } braces.');
+  }
+
+  // Build a minimal valid object with narrative, try to grab other fields too
+  const result = { narrative: narrativeMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"') };
+
+  // Try to extract arrays like hpChanges, xpAwards, npcs, newNpcs
+  for (const field of ['hpChanges', 'xpAwards', 'npcs', 'newNpcs']) {
+    const arrMatch = cleaned.match(new RegExp(`"${field}"\\s*:\\s*(\\[[\\s\\S]*?\\])\\s*[,}]`));
+    if (arrMatch) {
+      try { result[field] = JSON.parse(arrMatch[1]); } catch (_) { /* skip */ }
+    }
+  }
+
+  if (!result.narrative) {
     throw new Error('Response is missing the "narrative" field.');
   }
-  
-  return parsed;
+  return result;
 }
 
 function assignEquipmentStats(character) {
