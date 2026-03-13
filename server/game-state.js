@@ -10,6 +10,8 @@ class GameState {
     this.premise = '';
     this.setting = 'zombie-survival';
     this.round = 0;
+    this.chapter = 1;
+    this.roundsInChapter = 0;
     this.storyLog = [];
     this.roundActions = new Map();
     this.npcs = [];

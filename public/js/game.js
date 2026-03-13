@@ -706,8 +706,20 @@ socket.on('story-update', (data) => {
   $('#gm-action-log').classList.add('hidden');
   $('#gm-action-list').innerHTML = '';
   
-  // Update round
+  // Update round and chapter
   $('#game-round').textContent = data.round;
+  if (data.chapter) {
+    const chapterEl = $('#game-chapter');
+    const prevChapter = parseInt(chapterEl.textContent.replace('Ch.', '')) || 1;
+    chapterEl.textContent = `Ch.${data.chapter}`;
+    // Show chapter header when chapter changes
+    if (data.chapter > prevChapter) {
+      const chapterHeader = document.createElement('div');
+      chapterHeader.className = 'chapter-header';
+      chapterHeader.innerHTML = `<span>Chapter ${data.chapter}</span>`;
+      storyContent.appendChild(chapterHeader);
+    }
+  }
   
   // Add story entry
   const entry = document.createElement('div');

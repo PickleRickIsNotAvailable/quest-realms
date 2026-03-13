@@ -44,10 +44,17 @@ ${characterSheets}
 ============================
 YOUR TASK:
 ============================
-Generate an intense opening narrative for this zombie survival story. You must:
-1. Set the scene vividly — describe the ruined world, the danger, the atmosphere of dread
-2. Do NOT introduce any NPCs yet. The opening focuses entirely on the player characters and the environment. NPCs will be introduced in later rounds.
-3. Present a tense situation that forces the players to make survival choices
+Generate a SHORT, punchy opening narrative for this zombie survival story. This is Chapter 1.
+
+IMPORTANT — LENGTH RULES:
+- Keep the narrative between 150-250 words MAX. Be concise and impactful.
+- Every sentence must matter. Cut filler. No long descriptions of scenery.
+- Quick, vivid brushstrokes — not essays. Think TV show cold open, not novel chapter.
+
+You must:
+1. Set the scene with quick, vivid details — danger, dread, survival
+2. Do NOT introduce any NPCs yet. NPCs will appear in later rounds.
+3. Present a tense situation that forces survival choices
 4. Reference each player's character by name, their starting location, and weave in their backstory/traits
 5. End with a clear prompt asking "What do you do?"
 6. IMPORTANT: Each character has a SECRET FLAW listed above. Subtly weave these into the story WITHOUT revealing what the flaw is. For example, if someone is "Clumsy", describe them stumbling. If "Paranoid Wreck", describe them nervously scanning shadows. Players should FEEL the effects but never be told the flaw name.
@@ -95,9 +102,15 @@ PLAYER: ${a.playerName} (${a.character.name} — ${a.character.race} ${a.charact
       `  - ${p.character.name}: HP ${p.character.hp}/${p.character.maxHp}, Level ${p.character.level}, Skills: [${p.character.skills.join(', ')}]`
     ).join('\n');
 
+    const chapter = room.chapter || 1;
+    const isNewChapter = room.roundsInChapter === 0;
+    const chapterNote = isNewChapter
+      ? `\n*** NEW CHAPTER ${chapter} BEGINS! Start with a brief chapter title, then a short time-skip or scene change to keep the story fresh. Raise the stakes! ***`
+      : '';
+
     return `============================
-ROUND ${room.round} — RESOLVE PLAYER ACTIONS
-============================
+CHAPTER ${chapter} — ROUND ${room.round} — RESOLVE PLAYER ACTIONS
+============================${chapterNote}
 
 RECENT STORY:
 ${recentStory}
@@ -120,6 +133,12 @@ ${actionLines}
 ============================
 RULES:
 ============================
+IMPORTANT — LENGTH RULES:
+- Keep the narrative between 100-200 words MAX. Be concise and impactful.
+- Combine all player actions into ONE short flowing narrative. Do NOT write separate paragraphs per player.
+- Every sentence must drive the story. Cut filler, cut long descriptions. Punchy and dramatic.
+- Think comic book panels, not novel pages.
+
 - D20 roll 15+ = great success. 5 or less = failure/backfire. 20 = AMAZING outcome. 1 = DISASTER.
 - Character traits and skills SIGNIFICANTLY affect outcomes (e.g., a Scout with "Stealthy" trait sneaking = bonus)
 - Weapon damage is already rolled. A knife (1-4) hurts WAY less than a rifle (6-16) or shotgun (4-20).
@@ -139,7 +158,7 @@ RULES:
 RESPOND IN THIS EXACT JSON FORMAT (this is critical):
 ============================
 {
-  "narrative": "Vivid narrative of what happens this round. Use **bold** for character names and *italic* for dramatic moments.",
+  "narrative": "SHORT narrative (100-200 words max) of what happens. Use **bold** for character names and *italic* for dramatic moments. Combine all player actions into one flowing scene.",
   "hpChanges": [
     {"character": "Character Name", "amount": -15, "reason": "hit by zombie bite"}
   ],

@@ -219,6 +219,7 @@ io.on('connection', (socket) => {
           narrative: parsed.narrative,
           npcs: room.getNPCList(),
           round: room.round,
+          chapter: room.chapter,
           waitingFor: room.getAlivePlayers().map(p => p.name),
           players: room.getPlayerList(),
           options: parsed.options || []
@@ -230,6 +231,7 @@ io.on('connection', (socket) => {
         narrative: parsed.narrative,
         npcs: room.getNPCList(),
         round: room.round,
+        chapter: room.chapter,
         waitingFor: room.getAlivePlayers().map(p => p.name),
         players: sanitizePlayerList(room.getPlayerList()),
         options: parsed.options || []
@@ -309,6 +311,12 @@ io.on('connection', (socket) => {
 
       // Advance round
       room.round++;
+      room.roundsInChapter++;
+      // New chapter every 3-5 rounds (at round 4 of each chapter)
+      if (room.roundsInChapter >= 4) {
+        room.chapter++;
+        room.roundsInChapter = 0;
+      }
       const diceResults = room.lastDiceResults || [];
       room.roundActions.clear();
       room.lastDiceResults = null;
@@ -331,6 +339,7 @@ io.on('connection', (socket) => {
           narrative: parsed.narrative,
           npcs: room.getNPCList(),
           round: room.round,
+          chapter: room.chapter,
           waitingFor: alivePlayers.map(p => p.name),
           players: room.getPlayerList(),
           diceResults: diceResults,
@@ -344,6 +353,7 @@ io.on('connection', (socket) => {
         narrative: parsed.narrative,
         npcs: room.getNPCList(),
         round: room.round,
+        chapter: room.chapter,
         waitingFor: alivePlayers.map(p => p.name),
         players: sanitizePlayerList(room.getPlayerList()),
         diceResults: diceResults,
