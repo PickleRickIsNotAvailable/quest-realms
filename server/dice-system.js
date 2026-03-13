@@ -31,6 +31,8 @@ class DiceSystem {
     const weaponStats = {
       'dagger': { min: 1, max: 4, dice: '1d4' },
       'knife': { min: 1, max: 4, dice: '1d4' },
+      'axe': { min: 3, max: 10, dice: '1d10' },
+      'machete': { min: 3, max: 8, dice: '1d8' },
       'baseball bat': { min: 2, max: 8, dice: '1d8' },
       'short sword': { min: 2, max: 6, dice: '1d6' },
       'longsword': { min: 3, max: 8, dice: '1d8' },
@@ -43,6 +45,7 @@ class DiceSystem {
       'pistol': { min: 5, max: 14, dice: '2d7' },
       'rifle': { min: 6, max: 16, dice: '2d8' },
       'shotgun': { min: 4, max: 20, dice: '4d5' },
+      'molotov cocktail': { min: 6, max: 18, dice: '3d6' },
       'wand': { min: 3, max: 10, dice: '1d10' },
       'spell book': { min: 2, max: 12, dice: '2d6' },
       'flashlight': { min: 1, max: 2, dice: '1d2' }

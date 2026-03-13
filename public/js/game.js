@@ -528,10 +528,29 @@ socket.on('player-joined', (data) => {
 // Phase changed
 socket.on('phase-changed', (data) => {
   if (data.phase === 'character-creation') {
-    populateCharacterOptions('zombie-survival');
     showScreen('character');
     if (data.premise) {
       $('#premise-preview').textContent = `"${data.premise}"`;
+    }
+    if (state.isGM) {
+      // GM doesn't create a character — show waiting/management UI
+      document.querySelector('.character-form').innerHTML = `
+        <div style="text-align:center; padding: 20px;">
+          <h3>🎮 Game Master Mode</h3>
+          <p style="color: var(--text-dim); margin: 16px 0;">Waiting for players to create their survivors...</p>
+          <div class="char-ready-list" id="char-ready-list"></div>
+          <button id="btn-start-game" class="btn btn-accent hidden" style="margin-top: 16px;">
+            🎮 Start Adventure!
+          </button>
+        </div>
+      `;
+      $('#btn-start-game').addEventListener('click', () => {
+        socket.emit('start-game', { roomCode: state.roomCode });
+        $('#btn-start-game').disabled = true;
+        $('#btn-start-game').textContent = '⏳ Starting...';
+      });
+    } else {
+      populateCharacterOptions('zombie-survival');
     }
   } else if (data.phase === 'playing') {
     showScreen('game');
@@ -542,11 +561,8 @@ socket.on('phase-changed', (data) => {
 socket.on('character-submitted', (data) => {
   const readyList = $('#char-ready-list');
   
-  // Update the ready list
-  readyList.innerHTML = '';
   showToast(`${data.playerName} locked in ${data.character.name}!`, 'success');
   
-  // Show/update character list (we need to track via the player list from server)
   const item = document.createElement('div');
   item.className = 'char-ready-item';
   item.innerHTML = `

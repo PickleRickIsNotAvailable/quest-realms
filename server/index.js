@@ -306,7 +306,7 @@ io.on('connection', (socket) => {
     if (!room || room.phase !== 'playing') return;
     
     const player = room.players.get(socket.id);
-    if (!player || !player.character.alive) return;
+    if (!player || player.isGM || !player.character || !player.character.alive) return;
     if (room.roundActions.has(socket.id)) return;
 
     const dice = new DiceSystem();
@@ -376,7 +376,7 @@ io.on('connection', (socket) => {
     if (!room) return;
     
     const player = room.players.get(socket.id);
-    if (!player || player.character.perkPoints <= 0) return;
+    if (!player || !player.character || player.character.perkPoints <= 0) return;
 
     const skill = getRandomSkill(player.character);
     player.character.skills.push(skill);
@@ -618,6 +618,8 @@ function assignEquipmentStats(character) {
   const weaponStats = {
     'dagger': { minDmg: 1, maxDmg: 4, type: 'melee' },
     'knife': { minDmg: 1, maxDmg: 4, type: 'melee' },
+    'axe': { minDmg: 3, maxDmg: 10, type: 'melee' },
+    'machete': { minDmg: 3, maxDmg: 8, type: 'melee' },
     'baseball bat': { minDmg: 2, maxDmg: 8, type: 'melee' },
     'battle axe': { minDmg: 4, maxDmg: 10, type: 'melee' },
     'bow': { minDmg: 2, maxDmg: 8, type: 'ranged' },
@@ -625,6 +627,7 @@ function assignEquipmentStats(character) {
     'pistol': { minDmg: 5, maxDmg: 14, type: 'ranged' },
     'rifle': { minDmg: 6, maxDmg: 16, type: 'ranged' },
     'shotgun': { minDmg: 4, maxDmg: 20, type: 'ranged' },
+    'molotov cocktail': { minDmg: 6, maxDmg: 18, type: 'ranged' },
     'fists': { minDmg: 1, maxDmg: 3, type: 'melee' }
   };
 

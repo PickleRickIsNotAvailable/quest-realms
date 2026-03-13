@@ -89,10 +89,13 @@ class GameState {
   }
 
   allCharactersReady() {
+    let count = 0;
     for (const [, player] of this.players) {
+      if (player.isGM) continue;
       if (!player.characterReady) return false;
+      count++;
     }
-    return this.players.size > 0;
+    return count > 0;
   }
 
   allActionsSubmitted() {
