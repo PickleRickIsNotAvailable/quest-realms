@@ -14,7 +14,8 @@ const state = {
   character: null,
   selectedSetting: 'zombie-survival',
   myPerkPoints: 0,
-  currentPromptType: null  // 'opening' or 'round' — tracks what GM is working on
+  currentPromptType: null,  // 'opening' or 'round' — tracks what GM is working on
+  narratorEnabled: false
 };
 
 // ---- DOM Elements ----
@@ -406,6 +407,72 @@ $('#npc-toggle').addEventListener('click', () => {
   list.classList.toggle('open');
 });
 
+// ============================================================
+// NARRATOR (Text-to-Speech)
+// ============================================================
+const narratorBtn = $('#btn-narrator');
+
+narratorBtn.addEventListener('click', () => {
+  state.narratorEnabled = !state.narratorEnabled;
+  narratorBtn.textContent = state.narratorEnabled ? '🔊' : '🔇';
+  narratorBtn.classList.toggle('active', state.narratorEnabled);
+  if (!state.narratorEnabled) {
+    window.speechSynthesis.cancel();
+  }
+  showToast(state.narratorEnabled ? 'Narrator enabled' : 'Narrator disabled', 'info');
+});
+
+function narrateText(text) {
+  if (!state.narratorEnabled || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  // Strip markdown formatting for clean speech
+  const clean = text
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/#{1,4}\s*/g, '')
+    .replace(/---/g, '')
+    .replace(/\\n/g, ' ')
+    .replace(/<[^>]+>/g, '')
+    .trim();
+  // Split into chunks for long narratives (speechSynthesis has limits)
+  const chunks = clean.match(/[^.!?]+[.!?]+/g) || [clean];
+  const combined = [];
+  let current = '';
+  for (const chunk of chunks) {
+    if ((current + chunk).length > 200) {
+      if (current) combined.push(current.trim());
+      current = chunk;
+    } else {
+      current += chunk;
+    }
+  }
+  if (current) combined.push(current.trim());
+
+  let index = 0;
+  function speakNext() {
+    if (index >= combined.length || !state.narratorEnabled) return;
+    const utterance = new SpeechSynthesisUtterance(combined[index]);
+    utterance.rate = 0.95;
+    utterance.pitch = 0.9;
+    // Try to pick a deeper/dramatic voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.name.includes('Daniel') || v.name.includes('Google UK English Male') || v.name.includes('Aaron'));
+    if (preferred) utterance.voice = preferred;
+    else if (voices.length > 0) {
+      const englishVoice = voices.find(v => v.lang.startsWith('en'));
+      if (englishVoice) utterance.voice = englishVoice;
+    }
+    utterance.onend = () => { index++; speakNext(); };
+    window.speechSynthesis.speak(utterance);
+  }
+  // Voices load asynchronously on some browsers
+  if (window.speechSynthesis.getVoices().length === 0) {
+    window.speechSynthesis.addEventListener('voiceschanged', () => speakNext(), { once: true });
+  } else {
+    speakNext();
+  }
+}
+
 // Spend perk
 $('#btn-spend-perk').addEventListener('click', () => {
   socket.emit('spend-perk', { roomCode: state.roomCode });
@@ -663,10 +730,23 @@ socket.on('story-update', (data) => {
     }
   }
   
+  // Show equipment changes
+  if (data.equipmentChanges && data.equipmentChanges.length > 0) {
+    data.equipmentChanges.forEach(change => {
+      const adds = (change.add || []).map(i => `+${i}`).join(', ');
+      const removes = (change.remove || []).map(i => `-${i}`).join(', ');
+      const parts = [adds, removes].filter(Boolean).join(' | ');
+      if (parts) {
+        showToast(`🎒 ${change.character}: ${parts}`, 'info');
+      }
+    });
+  }
+  
+  // Narrate the story
+  narrateText(data.narrative);
+  
   scrollStoryToBottom();
 });
-
-// Action submitted by a player
 socket.on('action-submitted', (data) => {
   // Show dice roll to the submitting player
   if (data.playerName === state.playerName) {
@@ -753,6 +833,10 @@ function updatePlayerHealthBars(players) {
     const pct = Math.round((p.character.hp / p.character.maxHp) * 100);
     const hpClass = pct > 60 ? 'hp-high' : pct > 25 ? 'hp-mid' : 'hp-low';
     const dead = !p.character.alive;
+    // GM sees secret flaw if present
+    const flawLine = (state.isGM && p.character.negativeTrait)
+      ? `<div style="font-size:0.65rem; color:var(--danger); margin-top:2px; max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(p.character.negativeTrait)}">⚠️ ${escapeHtml(p.character.negativeTrait.split('—')[0].trim())}</div>`
+      : '';
     
     return `
       <div class="player-hp-badge ${dead ? 'dead' : ''}" onclick="showBio('${escapeHtml(p.id)}')">
@@ -764,6 +848,7 @@ function updatePlayerHealthBars(players) {
         <span style="font-size:0.7rem; color: ${dead ? 'var(--danger)' : 'var(--text-dim)'}">
           ${dead ? '💀' : p.character.hp}
         </span>
+        ${flawLine}
       </div>
     `;
   }).join('');
@@ -876,6 +961,10 @@ window.showBio = function(playerId) {
     
     <h4 style="color:var(--accent); margin:16px 0 8px;">🌟 Skills</h4>
     <div class="bio-skills">${(c.skills || []).length > 0 ? c.skills.map(s => `<span class="bio-skill-tag">${escapeHtml(s)}</span>`).join('') : '<span style="color:var(--text-dim);font-size:0.85rem;">No skills yet — earn perk points to unlock!</span>'}</div>
+    ${state.isGM && c.negativeTrait ? `
+    <h4 style="color:var(--danger); margin:16px 0 8px;">⚠️ Secret Flaw (GM Only)</h4>
+    <p style="font-size:0.9rem; color:var(--danger); line-height:1.5; background:rgba(255,0,0,0.1); padding:8px; border-radius:8px;">${escapeHtml(c.negativeTrait)}</p>
+    ` : ''}
   `;
   
   const panel = $('#bio-panel');

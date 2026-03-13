@@ -131,6 +131,7 @@ RULES:
 - Award XP: 10-50 per player based on what they did.
 - You may introduce new NPCs (survivor groups, bandits, infected) or kill existing ones. Use South African characters, locations, and culture.
 - IMPORTANT: Each character has a SECRET FLAW. These MUST affect gameplay! Low dice rolls + a relevant flaw = the flaw causes problems. Describe the EFFECTS without naming the flaw.
+- LOOT & EQUIPMENT RULES: Players can FIND, LOSE, or TRADE equipment during the story. If a player scavenges successfully, they may find new weapons, ammo, medical supplies, or tools. If they drop something, get robbed, or use a consumable (like a Molotov Cocktail), remove it. Always include "equipmentChanges" in your response to reflect this. Common loot: Knife, Axe, Machete, Baseball Bat, Pistol, Rifle, Shotgun, Crossbow, Med Kit, Flashlight, Molotov Cocktail, Backpack, Crowbar, Binoculars, Rope, Duct Tape, Canned Food, Water Bottle, Ammo Box, Flare Gun.
 - End with a new tense situation for the next round — always maintain the threat of zombies, hostile survivors, or resource scarcity.
 - Provide 3-4 suggested action options for the next round. These should be survival-focused choices (scavenge, fight, flee, fortify, negotiate, explore, rest). Players can also type their own custom action.
 
@@ -147,6 +148,9 @@ RESPOND IN THIS EXACT JSON FORMAT (this is critical):
   ],
   "newNpcs": [
     {"name": "Name", "description": "desc", "role": "hostile", "hp": 30, "maxHp": 30}
+  ],
+  "equipmentChanges": [
+    {"character": "Character Name", "add": ["Rifle", "Ammo Box"], "remove": ["Molotov Cocktail"]}
   ],
   "options": [
     "Option 1: A suggested action for the next round",

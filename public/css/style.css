@@ -512,6 +512,26 @@ h3 { font-size: 1.1rem; }
   flex-shrink: 0;
 }
 
+.narrator-btn {
+  padding: 4px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.narrator-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.narrator-btn:hover {
+  border-color: var(--accent);
+}
+
 .players-health-bar {
   display: flex;
   gap: 8px;
