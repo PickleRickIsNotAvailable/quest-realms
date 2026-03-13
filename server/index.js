@@ -382,6 +382,8 @@ io.on('connection', (socket) => {
 
     io.to(data.roomCode).emit('action-submitted', {
       playerName: player.name,
+      characterName: player.character.name,
+      action: data.action,
       diceRoll: diceRoll,
       weaponDamage: weaponDamage,
       waitingFor: room.getWaitingPlayers().map(p => p.name),

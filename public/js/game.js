@@ -422,54 +422,99 @@ narratorBtn.addEventListener('click', () => {
   showToast(state.narratorEnabled ? 'Narrator enabled' : 'Narrator disabled', 'info');
 });
 
+// Cache the best narrator voice once found
+let _narratorVoice = null;
+let _voicesLoaded = false;
+
+function pickNarratorVoice() {
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return null;
+  // Prefer premium/enhanced voices for natural sound
+  const preferNames = ['Samantha', 'Daniel', 'Karen', 'Moira', 'Tessa', 'Fiona',
+    'Google UK English Male', 'Google UK English Female', 'Aaron',
+    'Microsoft Mark', 'Microsoft David', 'Microsoft Zira'];
+  for (const name of preferNames) {
+    const v = voices.find(v => v.name.includes(name) && v.lang.startsWith('en'));
+    if (v) return v;
+  }
+  // Fallback: any English voice
+  return voices.find(v => v.lang.startsWith('en')) || voices[0];
+}
+
+// Load voices early
+if (window.speechSynthesis) {
+  const initVoices = () => {
+    _narratorVoice = pickNarratorVoice();
+    _voicesLoaded = true;
+  };
+  if (window.speechSynthesis.getVoices().length > 0) initVoices();
+  else window.speechSynthesis.addEventListener('voiceschanged', initVoices, { once: true });
+}
+
 function narrateText(text) {
   if (!state.narratorEnabled || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  // Strip markdown formatting for clean speech
-  const clean = text
+
+  // Clean markdown into natural prose
+  let clean = text
+    .replace(/\\n/g, '\n')
     .replace(/\*\*(.*?)\*\*/g, '$1')
     .replace(/\*(.*?)\*/g, '$1')
     .replace(/#{1,4}\s*/g, '')
-    .replace(/---/g, '')
-    .replace(/\\n/g, ' ')
+    .replace(/---+/g, '')
     .replace(/<[^>]+>/g, '')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
-  // Split into chunks for long narratives (speechSynthesis has limits)
-  const chunks = clean.match(/[^.!?]+[.!?]+/g) || [clean];
-  const combined = [];
-  let current = '';
-  for (const chunk of chunks) {
-    if ((current + chunk).length > 200) {
-      if (current) combined.push(current.trim());
-      current = chunk;
-    } else {
-      current += chunk;
-    }
-  }
-  if (current) combined.push(current.trim());
 
-  let index = 0;
-  function speakNext() {
-    if (index >= combined.length || !state.narratorEnabled) return;
-    const utterance = new SpeechSynthesisUtterance(combined[index]);
-    utterance.rate = 0.95;
-    utterance.pitch = 0.9;
-    // Try to pick a deeper/dramatic voice
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.name.includes('Daniel') || v.name.includes('Google UK English Male') || v.name.includes('Aaron'));
-    if (preferred) utterance.voice = preferred;
-    else if (voices.length > 0) {
-      const englishVoice = voices.find(v => v.lang.startsWith('en'));
-      if (englishVoice) utterance.voice = englishVoice;
+  // Split by paragraphs first for natural pacing
+  const paragraphs = clean.split(/\n\n+/).filter(p => p.trim());
+  const segments = [];
+  for (const para of paragraphs) {
+    // Split into sentence groups (~150 chars) for chunked speech
+    const sentences = para.match(/[^.!?]*[.!?]+["'\)\]]?\s*/g) || [para];
+    let current = '';
+    for (const s of sentences) {
+      if ((current + s).length > 150 && current) {
+        segments.push({ text: current.trim(), pause: 300 });
+        current = s;
+      } else {
+        current += s;
+      }
     }
-    utterance.onend = () => { index++; speakNext(); };
-    window.speechSynthesis.speak(utterance);
+    if (current.trim()) {
+      // Longer pause after paragraphs for dramatic effect
+      segments.push({ text: current.trim(), pause: 700 });
+    }
   }
-  // Voices load asynchronously on some browsers
-  if (window.speechSynthesis.getVoices().length === 0) {
-    window.speechSynthesis.addEventListener('voiceschanged', () => speakNext(), { once: true });
+
+  let idx = 0;
+  function speakSegment() {
+    if (idx >= segments.length || !state.narratorEnabled) return;
+    const seg = segments[idx];
+    const utt = new SpeechSynthesisUtterance(seg.text);
+    utt.rate = 0.88;
+    utt.pitch = 0.85;
+    utt.volume = 1;
+    if (_narratorVoice) utt.voice = _narratorVoice;
+    utt.onend = () => {
+      idx++;
+      // Pause between segments for natural pacing
+      if (idx < segments.length && state.narratorEnabled) {
+        setTimeout(speakSegment, seg.pause);
+      }
+    };
+    utt.onerror = () => { idx++; speakSegment(); };
+    window.speechSynthesis.speak(utt);
+  }
+
+  if (_voicesLoaded) {
+    speakSegment();
   } else {
-    speakNext();
+    window.speechSynthesis.addEventListener('voiceschanged', () => {
+      _narratorVoice = pickNarratorVoice();
+      _voicesLoaded = true;
+      speakSegment();
+    }, { once: true });
   }
 }
 
@@ -657,6 +702,10 @@ socket.on('story-update', (data) => {
   hideGMPanel();
   $('#loading-indicator').classList.add('hidden');
   
+  // Clear GM action log for new round
+  $('#gm-action-log').classList.add('hidden');
+  $('#gm-action-list').innerHTML = '';
+  
   // Update round
   $('#game-round').textContent = data.round;
   
@@ -748,10 +797,11 @@ socket.on('story-update', (data) => {
   scrollStoryToBottom();
 });
 socket.on('action-submitted', (data) => {
+  const critClass = data.diceRoll.critical ? 'crit' : data.diceRoll.critFail ? 'critfail' : '';
+  const critText = data.diceRoll.critical ? ' — CRITICAL HIT!' : data.diceRoll.critFail ? ' — CRITICAL FAIL!' : '';
+
   // Show dice roll to the submitting player
   if (data.playerName === state.playerName) {
-    const critClass = data.diceRoll.critical ? 'crit' : data.diceRoll.critFail ? 'critfail' : '';
-    const critText = data.diceRoll.critical ? ' — CRITICAL HIT!' : data.diceRoll.critFail ? ' — CRITICAL FAIL!' : '';
     $('#my-dice-roll').innerHTML = `
       <div class="dice-result-item" style="justify-content:center; margin-bottom:8px;">
         <span class="dice-value ${critClass} dice-roll-anim" style="font-size:1.5rem;">🎲 ${data.diceRoll.total}</span>
@@ -761,6 +811,25 @@ socket.on('action-submitted', (data) => {
     `;
   } else {
     showToast(`${data.playerName} rolled 🎲 ${data.diceRoll.total}${data.diceRoll.critical ? ' CRIT!' : data.diceRoll.critFail ? ' CRIT FAIL!' : ''}`, 'info');
+  }
+
+  // GM sees full action details in the action log
+  if (state.isGM) {
+    const logContainer = $('#gm-action-log');
+    const logList = $('#gm-action-list');
+    logContainer.classList.remove('hidden');
+    const entry = document.createElement('div');
+    entry.className = 'gm-action-entry';
+    entry.innerHTML = `
+      <div class="gm-action-player">
+        <strong>${escapeHtml(data.characterName || data.playerName)}</strong>
+        <span class="dice-value ${critClass}" style="font-size:0.9rem;">🎲 ${data.diceRoll.total}${critText}</span>
+        ${data.weaponDamage ? `<span style="color:var(--danger);font-size:0.8rem;">⚔️ ${data.weaponDamage.weapon} ${data.weaponDamage.damage}dmg</span>` : ''}
+      </div>
+      <div class="gm-action-text">"${escapeHtml(data.action)}"</div>
+    `;
+    logList.appendChild(entry);
+    logList.scrollTop = logList.scrollHeight;
   }
   
   updateWaitingPlayers(data.waitingFor);

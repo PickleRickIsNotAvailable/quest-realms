@@ -1146,6 +1146,55 @@ h3 { font-size: 1.1rem; }
 }
 
 /* ============================================================
+   GM ACTION LOG
+   ============================================================ */
+.gm-action-log {
+  background: #0e0e28;
+  border-top: 2px solid var(--primary);
+  padding: 8px 12px;
+  flex-shrink: 0;
+}
+
+.gm-action-log-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.gm-action-list {
+  max-height: 140px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gm-action-entry {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--primary);
+  animation: fadeSlideIn 0.3s ease;
+}
+
+.gm-action-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+
+.gm-action-text {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* ============================================================
    GM CHATGPT PANEL
    ============================================================ */
 .gm-panel {
