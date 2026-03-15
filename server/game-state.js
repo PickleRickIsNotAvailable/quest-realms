@@ -94,6 +94,7 @@ class GameState {
     let count = 0;
     for (const [, player] of this.players) {
       if (player.isGM) continue;
+      if (!player.connected) continue; // skip disconnected players
       if (!player.characterReady) return false;
       count++;
     }

@@ -1290,6 +1290,14 @@ socket.on('connect', () => {
         state.playerId = res.playerId;
         handleRejoin(res);
         showToast('Reconnected!', 'success');
+      } else {
+        // Room no longer exists (server restarted) — reset to title
+        state.roomCode = '';
+        state.playerName = '';
+        state.isGM = false;
+        state.character = null;
+        clearSession();
+        showScreen('title');
       }
     });
     return;
