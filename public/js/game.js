@@ -1280,7 +1280,7 @@ function restorePlayingState(res) {
 }
 
 socket.on('connect', () => {
-  // Mid-session reconnect (network drop — state is still in memory)
+  // Mid-session reconnect only (network drop — state is still in JS memory)
   if (state.roomCode && state.playerName) {
     socket.emit('reconnect-player', {
       roomCode: state.roomCode,
@@ -1300,30 +1300,10 @@ socket.on('connect', () => {
         showScreen('title');
       }
     });
-    return;
   }
-
-  // Fresh page load with saved session (new tab / browser reopen)
-  const saved = getSavedSession();
-  if (saved) {
-    socket.emit('reconnect-player', {
-      roomCode: saved.roomCode,
-      playerName: saved.playerName
-    }, (res) => {
-      if (res.success) {
-        state.playerId = res.playerId;
-        state.playerName = saved.playerName;
-        state.roomCode = saved.roomCode;
-        state.isGM = res.isGM;
-        saveSession();
-        handleRejoin(res);
-        showToast('Reconnected!', 'success');
-      } else {
-        // Session no longer valid
-        clearSession();
-      }
-    });
-  }
+  // If there's a saved session but no in-memory state (page reload / new tab),
+  // don't auto-reconnect — let the user rejoin manually via "Join Room"
+  // (form fields are pre-filled by initFromSession)
 });
 
 socket.on('disconnect', () => {
