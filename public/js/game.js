@@ -18,6 +18,30 @@ const state = {
   narratorEnabled: false
 };
 
+// ---- Session persistence ----
+function saveSession() {
+  try {
+    localStorage.setItem('qr_session', JSON.stringify({
+      roomCode: state.roomCode,
+      playerName: state.playerName,
+      isGM: state.isGM
+    }));
+  } catch (_) { /* localStorage unavailable */ }
+}
+
+function getSavedSession() {
+  try {
+    const raw = localStorage.getItem('qr_session');
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function clearSession() {
+  try { localStorage.removeItem('qr_session'); } catch (_) {}
+}
+
 // ---- DOM Elements ----
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -76,6 +100,7 @@ btnCreate.addEventListener('click', () => {
       state.playerName = name;
       state.roomCode = res.roomCode;
       state.isGM = true;
+      saveSession();
       enterLobby();
     } else {
       titleError.textContent = res.error || 'Failed to create room';
@@ -98,8 +123,14 @@ btnJoin.addEventListener('click', () => {
       state.playerId = res.playerId;
       state.playerName = name;
       state.roomCode = res.roomCode;
-      state.isGM = false;
-      enterLobby();
+      state.isGM = res.isGM || false;
+      saveSession();
+
+      if (res.rejoin) {
+        handleRejoin(res);
+      } else {
+        enterLobby();
+      }
     } else {
       titleError.textContent = res.error || 'Failed to join room';
       btnJoin.disabled = false;
@@ -867,8 +898,18 @@ socket.on('player-disconnected', (data) => {
   if (data.players) updatePlayerHealthBars(data.players);
 });
 
+// Player reconnected
+socket.on('player-reconnected', (data) => {
+  showToast(`${data.playerName} reconnected!`, 'success');
+  if (data.players) {
+    updatePlayerHealthBars(data.players);
+    updateLobbyPlayers(data.players);
+  }
+});
+
 // Game over
 socket.on('game-over', (data) => {
+  clearSession();
   showScreen('gameover');
   hideGMPanel();
   $('#gameover-narrative').innerHTML = formatMarkdown(data.narrative);
@@ -1122,42 +1163,156 @@ function showToast(message, type = 'info') {
 // ============================================================
 // RECONNECTION HANDLING
 // ============================================================
+
+function handleRejoin(res) {
+  state.isGM = res.isGM;
+  state.character = res.character;
+  if (res.roomCode) state.roomCode = res.roomCode;
+
+  if (res.phase === 'lobby') {
+    enterLobby();
+    if (res.players) updateLobbyPlayers(res.players);
+  } else if (res.phase === 'character-creation') {
+    showScreen('character');
+    if (res.premise) $('#premise-preview').textContent = `"${res.premise}"`;
+
+    if (state.isGM) {
+      // Restore GM character-creation UI
+      document.querySelector('.character-form').innerHTML = `
+        <div style="text-align:center; padding: 20px;">
+          <h3>\uD83C\uDFAE Game Master Mode</h3>
+          <p style="color: var(--text-dim); margin: 16px 0;">Waiting for players to create their survivors...</p>
+          <div class="char-ready-list" id="char-ready-list"></div>
+          <button id="btn-start-game" class="btn btn-accent hidden" style="margin-top: 16px;">
+            \uD83C\uDFAE Start Adventure!
+          </button>
+        </div>
+      `;
+      $('#btn-start-game').addEventListener('click', () => {
+        socket.emit('start-game', { roomCode: state.roomCode });
+        $('#btn-start-game').disabled = true;
+        $('#btn-start-game').textContent = '\u23F3 Starting...';
+      });
+      // Populate ready list from players data
+      if (res.players) {
+        const readyList = $('#char-ready-list');
+        let allReady = true;
+        let hasPlayers = false;
+        res.players.forEach(p => {
+          if (p.isGM) return;
+          hasPlayers = true;
+          if (p.characterReady && p.character) {
+            const item = document.createElement('div');
+            item.className = 'char-ready-item';
+            item.innerHTML = `
+              <span class="status-icon">\u2705</span>
+              <span><strong>${escapeHtml(p.character.name)}</strong> \u2014 ${p.character.race} ${p.character.class}</span>
+            `;
+            readyList.appendChild(item);
+          } else {
+            allReady = false;
+          }
+        });
+        if (allReady && hasPlayers) {
+          $('#btn-start-game').classList.remove('hidden');
+        }
+      }
+    } else if (res.characterReady) {
+      // Player already submitted — show waiting state
+      document.querySelector('.character-form').innerHTML = `
+        <div style="text-align:center; padding: 20px;">
+          <h3>\u2705 Character Submitted</h3>
+          <p style="color: var(--text-dim); margin: 16px 0;">Waiting for other players and the Game Master to start...</p>
+        </div>
+      `;
+    } else {
+      populateCharacterOptions('zombie-survival');
+    }
+  } else if (res.phase === 'playing') {
+    restorePlayingState(res);
+  } else if (res.phase === 'game-over') {
+    clearSession();
+    showScreen('gameover');
+  }
+}
+
+function restorePlayingState(res) {
+  showScreen('game');
+  if (res.character) state.character = res.character;
+
+  // Restore story log
+  if (res.storyLog) {
+    storyContent.innerHTML = '';
+    res.storyLog.forEach(entry => {
+      const el = document.createElement('div');
+      el.className = 'story-entry';
+      el.innerHTML = formatMarkdown(entry.text);
+      storyContent.appendChild(el);
+    });
+  }
+
+  if (res.players) updatePlayerHealthBars(res.players);
+  if (res.npcs) updateNPCs(res.npcs);
+
+  // Round & chapter display
+  $('#game-round').textContent = res.round || 1;
+  const chapterEl = $('#game-chapter');
+  if (chapterEl && res.chapter) {
+    chapterEl.textContent = `Ch.${res.chapter}`;
+  }
+
+  // Action input state
+  if (res.actionSubmitted) {
+    $('#action-input-wrapper').classList.add('hidden');
+    $('#action-options').classList.add('hidden');
+    $('#action-submitted-msg').classList.remove('hidden');
+  } else if (res.character && res.character.alive) {
+    $('#action-input-wrapper').classList.remove('hidden');
+    $('#action-submitted-msg').classList.add('hidden');
+  }
+
+  // Check if dead
+  if (res.character && !res.character.alive) {
+    showDeadOverlay();
+  }
+
+  scrollStoryToBottom();
+}
+
 socket.on('connect', () => {
+  // Mid-session reconnect (network drop — state is still in memory)
   if (state.roomCode && state.playerName) {
-    // Attempt to reconnect
     socket.emit('reconnect-player', {
       roomCode: state.roomCode,
       playerName: state.playerName
     }, (res) => {
       if (res.success) {
         state.playerId = res.playerId;
-        state.isGM = res.isGM;
-        
-        if (res.phase === 'playing') {
-          showScreen('game');
-          if (res.character) state.character = res.character;
-          if (res.storyLog) {
-            storyContent.innerHTML = '';
-            res.storyLog.forEach(entry => {
-              const el = document.createElement('div');
-              el.className = 'story-entry';
-              el.innerHTML = formatMarkdown(entry.text);
-              storyContent.appendChild(el);
-            });
-          }
-          if (res.players) updatePlayerHealthBars(res.players);
-          if (res.npcs) updateNPCs(res.npcs);
-          $('#game-round').textContent = res.round || 1;
-          
-          // Check if dead
-          if (res.character && !res.character.alive) {
-            showDeadOverlay();
-          }
-          
-          scrollStoryToBottom();
-        }
-        
+        handleRejoin(res);
         showToast('Reconnected!', 'success');
+      }
+    });
+    return;
+  }
+
+  // Fresh page load with saved session (new tab / browser reopen)
+  const saved = getSavedSession();
+  if (saved) {
+    socket.emit('reconnect-player', {
+      roomCode: saved.roomCode,
+      playerName: saved.playerName
+    }, (res) => {
+      if (res.success) {
+        state.playerId = res.playerId;
+        state.playerName = saved.playerName;
+        state.roomCode = saved.roomCode;
+        state.isGM = res.isGM;
+        saveSession();
+        handleRejoin(res);
+        showToast('Reconnected!', 'success');
+      } else {
+        // Session no longer valid
+        clearSession();
       }
     });
   }
@@ -1170,4 +1325,17 @@ socket.on('disconnect', () => {
 // ============================================================
 // INITIALIZE
 // ============================================================
+
+// Pre-fill name/code from saved session for convenience
+(function initFromSession() {
+  const saved = getSavedSession();
+  if (saved) {
+    if (playerNameInput) playerNameInput.value = saved.playerName;
+    if (roomCodeInput) roomCodeInput.value = saved.roomCode;
+    // Trigger validation so buttons enable
+    playerNameInput.dispatchEvent(new Event('input'));
+    roomCodeInput.dispatchEvent(new Event('input'));
+  }
+})();
+
 console.log('⚔️ Quest Realms loaded!');

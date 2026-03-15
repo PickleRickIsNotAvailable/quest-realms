@@ -56,11 +56,74 @@ io.on('connection', (socket) => {
   // JOIN ROOM
   // ----------------------------------------------------------
   socket.on('join-room', (data, callback) => {
-    const room = rooms.get(data.roomCode?.toUpperCase());
+    const roomCode = data.roomCode?.toUpperCase();
+    const room = rooms.get(roomCode);
     
     if (!room) {
       return callback({ success: false, error: 'Room not found!' });
     }
+
+    // Check if this is a disconnected player trying to rejoin
+    let rejoinId = null;
+    room.players.forEach((player, id) => {
+      if (player.name === data.playerName && !player.connected) {
+        rejoinId = id;
+      }
+    });
+
+    if (rejoinId) {
+      // Rejoin: transfer player data to new socket
+      const playerData = room.players.get(rejoinId);
+      room.players.delete(rejoinId);
+      playerData.connected = true;
+      room.players.set(socket.id, playerData);
+
+      if (room.gmId === rejoinId) room.gmId = socket.id;
+
+      // Transfer round action if they already submitted this round
+      if (room.roundActions.has(rejoinId)) {
+        const action = room.roundActions.get(rejoinId);
+        room.roundActions.delete(rejoinId);
+        action.playerId = socket.id;
+        room.roundActions.set(socket.id, action);
+      }
+
+      socket.join(roomCode);
+
+      const isGM = room.gmId === socket.id;
+      const safeChar = playerData.character
+        ? (() => { const { negativeTrait, ...rest } = playerData.character; return rest; })()
+        : null;
+
+      callback({
+        success: true,
+        roomCode: roomCode,
+        playerId: socket.id,
+        isGM: isGM,
+        rejoin: true,
+        phase: room.phase,
+        character: safeChar,
+        characterReady: playerData.characterReady,
+        storyLog: room.storyLog.slice(-10),
+        players: isGM ? room.getPlayerList() : sanitizePlayerList(room.getPlayerList()),
+        npcs: room.getNPCList(),
+        round: room.round,
+        chapter: room.chapter,
+        premise: room.premise,
+        actionSubmitted: room.roundActions.has(socket.id)
+      });
+
+      // Notify others
+      io.to(roomCode).emit('player-reconnected', {
+        playerName: playerData.name,
+        players: sanitizePlayerList(room.getPlayerList())
+      });
+
+      console.log(`${data.playerName} rejoined room ${roomCode}`);
+      return;
+    }
+
+    // Normal join — only allowed in lobby or character-creation
     if (room.phase !== 'lobby' && room.phase !== 'character-creation') {
       return callback({ success: false, error: 'Game already in progress!' });
     }
@@ -69,22 +132,22 @@ io.on('connection', (socket) => {
     }
 
     room.addPlayer(socket.id, data.playerName);
-    socket.join(data.roomCode.toUpperCase());
+    socket.join(roomCode);
     
     callback({ 
       success: true, 
-      roomCode: data.roomCode.toUpperCase(),
+      roomCode: roomCode,
       playerId: socket.id,
       isGM: false
     });
 
     // Notify all players in the room
-    io.to(data.roomCode.toUpperCase()).emit('player-joined', {
+    io.to(roomCode).emit('player-joined', {
       players: room.getPlayerList(),
       playerName: data.playerName
     });
     
-    console.log(`${data.playerName} joined room ${data.roomCode}`);
+    console.log(`${data.playerName} joined room ${roomCode}`);
   });
 
   // ----------------------------------------------------------
@@ -510,21 +573,46 @@ io.on('connection', (socket) => {
     room.players.set(socket.id, playerData);
     
     if (room.gmId === foundId) room.gmId = socket.id;
+
+    // Transfer round action if they already submitted this round
+    if (room.roundActions.has(foundId)) {
+      const action = room.roundActions.get(foundId);
+      room.roundActions.delete(foundId);
+      action.playerId = socket.id;
+      room.roundActions.set(socket.id, action);
+    }
     
     socket.join(data.roomCode);
     
-    const { negativeTrait: _nt, ...safeChar } = playerData.character || {};
+    const isGM = room.gmId === socket.id;
+    const safeChar = playerData.character
+      ? (() => { const { negativeTrait, ...rest } = playerData.character; return rest; })()
+      : null;
+
     callback({
       success: true,
+      roomCode: data.roomCode,
       playerId: socket.id,
-      isGM: room.gmId === socket.id,
+      isGM: isGM,
       phase: room.phase,
-      character: playerData.character ? safeChar : null,
+      character: safeChar,
+      characterReady: playerData.characterReady,
       storyLog: room.storyLog.slice(-10),
-      players: sanitizePlayerList(room.getPlayerList()),
+      players: isGM ? room.getPlayerList() : sanitizePlayerList(room.getPlayerList()),
       npcs: room.getNPCList(),
-      round: room.round
+      round: room.round,
+      chapter: room.chapter,
+      premise: room.premise,
+      actionSubmitted: room.roundActions.has(socket.id)
     });
+
+    // Notify others
+    io.to(data.roomCode).emit('player-reconnected', {
+      playerName: playerData.name,
+      players: sanitizePlayerList(room.getPlayerList())
+    });
+
+    console.log(`${data.playerName} reconnected to room ${data.roomCode}`);
   });
 });
 
